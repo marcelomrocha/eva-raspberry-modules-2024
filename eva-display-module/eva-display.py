@@ -21,6 +21,9 @@ broker = config.MQTT_BROKER_ADRESS # Broker address.
 port = config.MQTT_PORT # Broker Port.
 topic_base = config.EVA_TOPIC_BASE
 
+print("#####################################################################################")
+print("############### EVA-Display Module - Last Version (October, 12, 2025) ###############")
+print("#####################################################################################")
 
 class ImageLabel(tk.Label):
     """a label that displays images and plays them if they are gifs"""
@@ -278,23 +281,32 @@ class ImageLabel(tk.Label):
         key = event.char
         print(f"'{key}' is pressed")
         if key == 'n':
-            self.targetstate = "neutral"
+            if self.stopped:
+                self.targetstate = "neutral"
         elif key == 'a':
-            self.targetstate = "angry"
+            if self.stopped:
+                self.targetstate = "angry"
         elif key == 's':
-            self.targetstate = "sad"
+            if self.stopped:
+                self.targetstate = "sad"
         elif key == 'h':
-            self.targetstate = "happy"
+            if self.stopped:
+                self.targetstate = "happy"
         elif key == 'f':
-            self.targetstate = "fear"
+            if self.stopped:
+                self.targetstate = "fear"
         elif key == 'r':
-            self.targetstate = "surprise"
+            if self.stopped:
+                self.targetstate = "surprise"
         elif key == 'd':
-            self.targetstate = "disgust"
+            if self.stopped:
+                self.targetstate = "disgust"
         elif key == 'i':
-            self.targetstate = "inlove"
+            if self.stopped:
+                self.targetstate = "inlove"
         elif key == 'p':
-            self.targetstate = "blink"
+            if self.stopped:
+                self.targetstate = "blink"
         elif key == 'q':
             exit(0)
 
@@ -306,19 +318,6 @@ lbl = ImageLabel(root)
 lbl.grid(column=0, row=0, padx= 150, pady=150)
 lbl.load("eva-display-module/eva-expressions.gif")
 root.bind('<Key>', lbl.key_press)
-
-
-# # Opening of EVA (Can be commented)
-# from vlc import *
-# media_player = MediaPlayer()
-# media = Media("eva-abertura-logo.mp4")
-# media_player.set_media(media)
-# media_player.toggle_fullscreen()
-# media_player.play()
-# time.sleep(0.1) # Time to start the video using VLC
-# while media_player.is_playing():
-#             time.sleep(.1)
-
 
 
 # MQTT
@@ -333,25 +332,34 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     if msg.topic == topic_base + '/evaEmotion':
-        client.publish(topic_base + '/syslog', "EVA's facial expression: " + msg.payload.decode()) 
+        client.publish(topic_base + '/SYSLOG', "EVA's facial expression: " + msg.payload.decode()) 
         if msg.payload.decode() == "NEUTRAL":
-            lbl.targetstate = "neutral"
+            if lbl.stopped:
+                lbl.targetstate = "neutral"
         elif msg.payload.decode() == "HAPPY":
-            lbl.targetstate = "happy"
+            if lbl.stopped:
+                lbl.targetstate = "happy"
         elif msg.payload.decode() == "ANGRY":
-            lbl.targetstate = "angry"
+            if lbl.stopped:
+                lbl.targetstate = "angry"
         elif msg.payload.decode() == "SAD":
-            lbl.targetstate = "sad"
+            if lbl.stopped:
+                lbl.targetstate = "sad"
         elif msg.payload.decode() == "FEAR":
-            lbl.targetstate = "fear"
+            if lbl.stopped:
+                lbl.targetstate = "fear"
         elif msg.payload.decode() == "SURPRISE":
-            lbl.targetstate = "surprise"
+            if lbl.stopped:
+                lbl.targetstate = "surprise"
         elif msg.payload.decode() == "DISGUST":
-            lbl.targetstate = "disgust"
+            if lbl.stopped:
+                lbl.targetstate = "disgust"
         elif msg.payload.decode() == "INLOVE":
-            lbl.targetstate = "inlove"
+            if lbl.stopped:
+                lbl.targetstate = "inlove"
         elif msg.payload.decode() == "BLINK":
-            lbl.targetstate = "blink"
+            if lbl.stopped:
+                lbl.targetstate = "blink"
 
             
 # Run the MQTT client thread.
@@ -371,3 +379,4 @@ client.loop_start()
 
 # Executes the graphical interface thread.
 root.mainloop()
+
