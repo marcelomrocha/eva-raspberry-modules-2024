@@ -24,8 +24,6 @@ from paho.mqtt import client as mqtt_client
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 
-from pyzbar import pyzbar
-
 import cv2
 import numpy as np
 
@@ -35,7 +33,6 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, MaxPooling
 from tensorflow.keras.models import Sequential
 
 
-# import mediapipe as mp
 
 # Initialize the camera
 camera = PiCamera()
@@ -161,40 +158,42 @@ def on_message(client, userdata, msg):
 ###################################################################################
     elif msg.topic == topic_base + '/qrRead':
         client.publish(topic_base + '/syslog', "Computer Vision: " + "Eva will try to read a QR Code.") 
-        qrCode_read = False
-        camera.resolution = (640, 480)
-        camera.framerate = 30
-        rawCapture = PiRGBArray(camera, size=(640, 480))
-        # Pequeno atraso para que a câmera se ajuste ao sensor
-        time.sleep(0.1)
+        camera.resolution = (1920, 1080) # This resolution showed improvements in QR recognition
+        camera.framerate = 10
+        rawCapture = PiRGBArray(camera)
         print("Trying to read a QR Code...")
-        # Loop para captura contínua de frames
-
+        qrCodeDetector = cv2.QRCodeDetector() # QRCode detector
         for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-            
             image = frame.array
-            
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            try: # It was necessary to protect this code block, because it was broking with an error related to a bad image size when capturing the QR code
+                decodedText, points, _ = qrCodeDetector.detectAndDecode(gray)  
+                if (decodedText != ""):
+                    print("QR Code content: " + decodedText)
+                    client.publish(topic_base + '/syslog', "QR Code content: " + decodedText)
+                    client.publish(topic_base + "/var/dollar", decodedText) # This publish will pass the value to the EvaSIM, so the EvaSIM will also unblock itself
+                    # Clears the stream preparing to capture the next frame.
+                    rawCapture.truncate(0)
+                    break
+                else:
+                    print("A empty string was read...")
+                    client.publish(topic_base + "/syslog", "A EMPTY string was read...")
+                
+                # Shows the video capture window.
+                if args.video:
+                    cv2.imshow("Frame", gray)
 
-            barcodes = pyzbar.decode(gray)
+                    key = cv2.waitKey(1) & 0xFF
 
-            for barcode in barcodes:
-                decodedText = barcode.data.decode("utf-8")
-   
-                print("QR Code content: " + decodedText)
-
-                client.publish(topic_base + '/syslog', "QR Code content: " + decodedText)
-                client.publish(topic_base + "/var/dollar", decodedText) # This publish will pass the value to the EvaSIM, so the EvaSIM will also unblock itself
+                    # The 'q' key breaks the loop.
+                    if key == ord("q"):
+                        break
                 # Clears the stream preparing to capture the next frame.
                 rawCapture.truncate(0)
-                qrCode_read = True
-                break
-
-            # Clears the stream preparing to capture the next frame.
-            rawCapture.truncate(0)
-            if qrCode_read:
-                break
-
+            except:
+                print("There was a problem during the QR Code reading process. We will try again!")
+                # Clears the stream preparing to capture the next frame.
+                rawCapture.truncate(0)
 
 
 # Creates the 7 layers for the model.
